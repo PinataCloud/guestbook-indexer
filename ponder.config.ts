@@ -8,7 +8,7 @@ export default createConfig({
     arbitrum: {
       chainId: 42161,
       transport: http(process.env.PONDER_RPC_URL_42161),
- 			pollingInterval: 2_000,
+ 			pollingInterval: 2_500,
     },
   },
   contracts: {
