@@ -25,7 +25,8 @@ app.get("/entries", async (c) => {
       lensHandle: schema.account.lensHandle,
     })
     .from(schema.guestbookEntry)
-    .leftJoin(schema.account, eq(schema.guestbookEntry.signer, schema.account.address));
+    .leftJoin(schema.account, eq(schema.guestbookEntry.signer, schema.account.address))
+    .orderBy(schema.guestbookEntry.timestamp)
 
   return c.json(entries);
 });
