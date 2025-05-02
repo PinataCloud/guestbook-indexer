@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { eq } from "drizzle-orm";
+import { pinata } from "../pinata";
 
 const app = new Hono();
 
@@ -36,5 +37,14 @@ app.get("/accounts", async (c) => {
 
   return c.json(accounts);
 });
+
+app.get("/presigned_url", async (c) => {
+  const url = await pinata.upload.public.createSignedURL({
+    expires: 30,
+    mimeTypes: ["image/gif", "application/json"]
+  })
+
+  return c.json(url)
+})
 
 export default app;
