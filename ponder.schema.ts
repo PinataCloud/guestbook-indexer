@@ -2,6 +2,14 @@ import { onchainTable } from "ponder";
 
 export const account = onchainTable("account", (t) => ({
   address: t.hex().primaryKey(),
+  farcasterName: t.text(),
+  farcasterDisplayName: t.text(),
+  farcasterAvatar: t.text(),
+  farcasterDescription: t.text(),
+  farcasterFollowers: t.integer(),
+  ensName: t.text(),
+  lensHandle: t.text(),
+  lastUpdated: t.integer(),
 }));
 
 export const guestbookEntry = onchainTable("guestbook_entry", (t) => ({
@@ -10,6 +18,7 @@ export const guestbookEntry = onchainTable("guestbook_entry", (t) => ({
   message: t.text(), // The message from the URI
   imageUrl: t.text(), // The image URL from the URI
   timestamp: t.integer().notNull(), // When the entry was created
+  accountId: t.hex(), // We'll keep this for joins but remove the foreign key constraint
 }));
 
 // If you want to store the raw URI data as well

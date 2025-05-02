@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "ponder:api";
 import schema from "ponder:schema";
-
+import { eq } from "drizzle-orm";
 
 const app = new Hono();
 
@@ -11,9 +11,30 @@ app.get("/", (c) => {
 
 app.get("/entries", async (c) => {
   const entries = await db
-    .select()
+    .select({
+      id: schema.guestbookEntry.id,
+      signer: schema.guestbookEntry.signer,
+      message: schema.guestbookEntry.message,
+      imageUrl: schema.guestbookEntry.imageUrl,
+      timestamp: schema.guestbookEntry.timestamp,
+      farcasterName: schema.account.farcasterName,
+      farcasterDisplayName: schema.account.farcasterDisplayName,
+      farcasterAvatar: schema.account.farcasterAvatar,
+      ensName: schema.account.ensName,
+      lensHandle: schema.account.lensHandle,
+    })
     .from(schema.guestbookEntry)
-  return c.json(entries)
-})
+    .leftJoin(schema.account, eq(schema.guestbookEntry.signer, schema.account.address));
+
+  return c.json(entries);
+});
+
+app.get("/accounts", async (c) => {
+  const accounts = await db
+    .select()
+    .from(schema.account);
+
+  return c.json(accounts);
+});
 
 export default app;

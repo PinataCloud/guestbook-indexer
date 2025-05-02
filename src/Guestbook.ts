@@ -1,21 +1,22 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
-import { pinata } from "./pinata"
+import { pinata } from "./pinata";
+import { fetchWeb3BioProfile, extractProfileInfo } from "./web3bio";
 
 type UriData = {
   message: string;
   imageUrl: string;
-}
+};
 
 // Function to fetch and parse IPFS or HTTP content
 async function fetchFromUri(uri: string): Promise<UriData | undefined> {
   try {
-    const res = await pinata.gateways.public.get(uri)
-    if(!res.data){
-      throw Error("Problem fetching content")
+    const res = await pinata.gateways.public.get(uri);
+    if (!res.data) {
+      throw Error("Problem fetching content");
     }
-    const data = res.data as unknown as UriData
-    return data
+    const data = res.data as unknown as UriData;
+    return data;
   } catch (error) {
     console.error(`Error fetching URI ${uri}:`, error);
     return undefined;
@@ -49,7 +50,35 @@ ponder.on("Guestbook:NewEntry", async ({ event, context }) => {
     entryMessage = uri;
   }
 
-  // Store the URI data
+  // Fetch Web3.bio profile data
+  const profiles = await fetchWeb3BioProfile(signer);
+  const profileInfo = extractProfileInfo(profiles);
+
+  // Store or update account information using the proper upsert pattern
+  await context.db
+    .insert(schema.account)
+    .values({
+      address: signer,
+      farcasterName: profileInfo.farcasterName,
+      farcasterDisplayName: profileInfo.farcasterDisplayName,
+      farcasterAvatar: profileInfo.farcasterAvatar,
+      farcasterDescription: profileInfo.farcasterDescription,
+      farcasterFollowers: profileInfo.farcasterFollowers,
+      ensName: profileInfo.ensName,
+      lensHandle: profileInfo.lensHandle,
+      lastUpdated: Number(timestamp),
+    })
+    .onConflictDoUpdate(() => ({
+      farcasterName: profileInfo.farcasterName,
+      farcasterDisplayName: profileInfo.farcasterDisplayName,
+      farcasterAvatar: profileInfo.farcasterAvatar,
+      farcasterDescription: profileInfo.farcasterDescription,
+      farcasterFollowers: profileInfo.farcasterFollowers,
+      ensName: profileInfo.ensName,
+      lensHandle: profileInfo.lensHandle,
+      lastUpdated: Number(timestamp),
+    }));
+
   await context.db.insert(schema.uriData).values({
     id,
     uri,
@@ -63,5 +92,6 @@ ponder.on("Guestbook:NewEntry", async ({ event, context }) => {
     message: entryMessage,
     imageUrl,
     timestamp: Number(timestamp),
+    accountId: signer,
   });
 });
