@@ -14,9 +14,9 @@ export default createConfig({
   contracts: {
     Guestbook: {
       abi: GuestbookAbi,
-      address: "0x9229B7261685C222483f3f539EC14962c0B0b041",
+      address: "0xF89E1749D28a5fEbB984584D795Abe17218AA2a7",
       network: "arbitrum",
-      startBlock: 331883235
+      startBlock: 333596361
     },
   },
 });

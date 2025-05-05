@@ -2,6 +2,9 @@ import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import { pinata } from "./pinata";
 import { fetchWeb3BioProfile, extractProfileInfo } from "./web3bio";
+import { buffer } from "node:stream/consumers";
+import { group } from "node:console";
+import { or } from "ponder";
 
 type UriData = {
   message: string;
@@ -24,31 +27,10 @@ async function fetchFromUri(uri: string): Promise<UriData | undefined> {
 }
 
 ponder.on("Guestbook:NewEntry", async ({ event, context }) => {
-  const { signer, message: uri, timestamp } = event.args;
+  const { signer, message, imageUrl, timestamp } = event.args;
 
   // Generate a unique ID for this entry
   const id = `${event.transaction.hash}-${event.log.logIndex}`;
-
-  // Fetch and parse the URI data
-  const uriData = await fetchFromUri(uri);
-
-  // Extract relevant data from the URI
-  let entryMessage = '';
-  let imageUrl = '';
-
-  if (uriData) {
-    // If the URI points to JSON data with specific fields
-    if (typeof uriData === 'object' && uriData !== null) {
-      entryMessage = uriData.message || '';
-      imageUrl = uriData.imageUrl || '';
-    } else if (typeof uriData === 'string') {
-      // If the URI directly contains the message
-      entryMessage = uriData;
-    }
-  } else {
-    // If we couldn't fetch/parse the URI, use it as the message
-    entryMessage = uri;
-  }
 
   // Fetch Web3.bio profile data
   const profiles = await fetchWeb3BioProfile(signer);
@@ -79,19 +61,49 @@ ponder.on("Guestbook:NewEntry", async ({ event, context }) => {
       lastUpdated: Number(timestamp),
     }));
 
-  await context.db.insert(schema.uriData).values({
-    id,
-    uri,
-    parsedData: uriData || {},
-  });
 
   // Store the guestbook entry
   await context.db.insert(schema.guestbookEntry).values({
     id,
     signer,
-    message: entryMessage,
+    message,
     imageUrl,
     timestamp: Number(timestamp),
     accountId: signer,
   });
+
+  function stringifyWithBigInt(value: any) {
+    return JSON.stringify(value, (_, v) =>
+      typeof v === 'bigint' ? `${v}n` : v
+    );
+  }
+  const serializedEvent = stringifyWithBigInt(event);
+  const blob = new Blob([serializedEvent])
+  const file = new File([blob], "event.json", { type: "application/json" })
+
+  const store = await pinata.upload.public.file(file)
+    .keyvalues({
+      id,
+      signer,
+      message,
+      imageUrl,
+      timestamp: Number(timestamp).toString(),
+      accountId: signer,
+    })
+    .group("9003e1ad-b0d9-45b2-baed-7baae19781a3")
+
+  // Used to parse event.json to restore BigInt
+  // function parse(text) {
+  //     return JSON.parse(text, (_, value) => {
+  //         if (typeof value === 'string') {
+  //             const m = value.match(/(-?\d+)n/);
+  //             if (m && m[0] === value) {
+  //                 value = BigInt(m[1]);
+  //             }
+  //         }
+  //         return value;
+  //     });
+  // }
+
+  console.log("Event stored: ", store.cid)
 });
