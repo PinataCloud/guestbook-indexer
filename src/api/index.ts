@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "ponder:api";
 import schema from "ponder:schema";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { pinata } from "../pinata";
 
 const app = new Hono();
@@ -26,7 +26,7 @@ app.get("/entries", async (c) => {
     })
     .from(schema.guestbookEntry)
     .leftJoin(schema.account, eq(schema.guestbookEntry.signer, schema.account.address))
-    .orderBy(schema.guestbookEntry.timestamp)
+    .orderBy(desc(schema.guestbookEntry.timestamp))
 
   return c.json(entries);
 });
